@@ -52,7 +52,7 @@ def parse_jobs():
 def count_gpus_in_use(job):
     if job['JobState'] != 'RUNNING':
         return 0
-    matches = re.match('.*gres/gpu=([0-9]*).*', job['TRES'])
+    matches = re.match('.*gres/gpu=([0-9]*).*', job['AllocTRES'])
     if matches is not None:
         return int(matches.group(1))
     else:
