@@ -262,6 +262,22 @@ def print_display_data(job_display_data, display_columns, print_string,
         print(spacer.join([str(job[key]).ljust(formatting[key]) 
                            for key in display_columns]))
 
+def accumulate_job_data_by_user(job_display_data, prefix, spacer=' | '):
+    unique_users = sorted(set([job['UserId2'] for job in job_display_data]))
+    gpus_per_user = {user: sum([int(job['GPUs'][0]) for job in job_display_data 
+                                if job['UserId2'] == user]) for user in unique_users}
+    total_jobs_per_user = {user: len([job for job in job_display_data 
+                                      if job['UserId2'] == user]) for user in unique_users}
+    
+    print(f'\n{prefix}\nResources per user:')
+    keys = ['user_id', 'gpus', 'jobs']
+
+    formatting = {'user_id': 20, 'gpus': 5, 'jobs': 5}
+    for user in unique_users:
+        print(spacer.join([str(user).ljust(formatting['user_id']),
+                            str(gpus_per_user[user]).ljust(formatting['gpus']),
+                            str(total_jobs_per_user[user]).ljust(formatting['jobs'])]))
+              
 
 def parse_nodes(raw_nodes):
     nodes = {}
@@ -281,15 +297,21 @@ if __name__ == '__main__':
 
     print_total_gpus(jobs, nodes)
 
+    
+    accumulate_job_data_by_user(get_running_job_display_data(jobs), 
+                                'Running jobs')
+    
+    accumulate_job_data_by_user(get_pending_job_display_data(jobs), 
+                                'Pending jobs')
     print_display_data(get_running_job_display_data(jobs), 
                        display_columns_running, 'Running jobs')
+    # print_display_data(get_pending_job_display_data(jobs), 
+    #                    display_columns_pending, 'Pending jobs')
     
-    print_display_data(get_pending_job_display_data(jobs), 
-                       display_columns_pending, 'Pending jobs')
 
     all_states = set([job['JobState'] for job in jobs])
     other_states = all_states - {'RUNNING', 'PENDING'}
     other_jobs = [job for job in jobs if job['JobState'] in other_states]
 
-    print_display_data(other_job_display_data(other_jobs, minutes=30), 
-                        display_columns_other, 'Other jobs')
+    # print_display_data(other_job_display_data(other_jobs, minutes=30), 
+    #                     display_columns_other, 'Other jobs')
