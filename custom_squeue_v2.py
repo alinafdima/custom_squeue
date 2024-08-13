@@ -19,6 +19,7 @@ display_dict_running = {
     'gpus': 4,
     'cpus': 4,
     'mem': 6,
+    'node': 15,
     'priority': 10,
     'runtime': 10,
     'remaining_time': 15,
@@ -31,6 +32,7 @@ display_dict_pending = {
     'gpus': 4,
     'cpus': 4,
     'priority': 10,
+    'time_limit': 10,
 }
 
 display_dict_other = {
@@ -115,7 +117,10 @@ def print_usage_breakdown(jobs: JobMaster):
     gpus_per_user = {
         user: sum([job.gpus for job in jobs.running_jobs if job.user_id == user])
         for user in running_users}
-    for user, gpus in gpus_per_user.items():
+    gpus_per_user = sorted([
+        (user, gpus) for user, gpus in gpus_per_user.items()], 
+        key=lambda x: (-x[1], x[0]))
+    for user, gpus in gpus_per_user:
         if gpus > 0:
             print(f'{user}'.ljust(10) + f'{gpus} GPUs')
 
@@ -126,9 +131,16 @@ def print_pending_usage_breakdown(jobs: JobMaster):
     gpus_per_user_p = {
         user: [job.gpus for job in jobs.pending_jobs if job.user_id == user]
         for user in pending_users}
-    for user, gpus in gpus_per_user_p.items():
+    jobs_per_user_p = {
+        user: len(gpus) for user, gpus in gpus_per_user_p.items()}
+    gpus_per_user_p = sorted([
+        (user, gpus) for user, gpus in gpus_per_user_p.items()], 
+        key=lambda x: x[0])
+    for user, gpus in gpus_per_user_p:
         if len(gpus) > 0:
-            print(f'{user}'.ljust(10) + f'{gpus} GPUs')
+            print(f'{user}'.ljust(10) \
+                + f'{jobs_per_user_p[user]} jobs: ' \
+                + f'({gpus} GPUs)')
 
 
 def print_running_jobs_all(jobs: JobMaster, exclude_user):

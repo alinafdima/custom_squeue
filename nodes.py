@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # %%
 import subprocess
-down_states = ['down', 'drain', 'fail', 'fail*', 'down*']
+down_states = ['down', 'drain', 'fail', 'fail*', 'down*', 'draining']
 
 class Node:
     def __init__(self, raw_string):
