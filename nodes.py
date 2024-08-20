@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # %%
 import subprocess
-down_states = ['down', 'drain', 'fail', 'fail*', 'down*', 'draining']
+down_states = ['down', 'drain', 'fail', 'fail*', 'down*', 'draining', 'drained']
 
 class Node:
     def __init__(self, raw_string):
@@ -41,7 +41,7 @@ class NodeMaster():
 
     def read_all_nodes(self):
         output = subprocess.check_output([
-            'sinfo', '-N', '-O', 'NodeList:15,Gres:15,StateLong:6'])
+            'sinfo', '-N', '-O', 'NodeList:15,Gres:15,StateLong:15'])
         output = output.decode('utf-8')
         nodes = output.split('\n')[1:]
         nodes = [Node(node) for node in nodes if node]
