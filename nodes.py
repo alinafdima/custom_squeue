@@ -7,49 +7,59 @@
 #
 # ------------------------------------------------------------------------------
 # %%
+from dataclasses import dataclass
+import re
 import subprocess
 down_states = ['down', 'drain', 'fail', 'fail*', 'down*', 'draining', 'drained']
 
+@dataclass
 class Node:
-    def __init__(self, raw_string):
-        self.name, gres, self.state = [x for x in raw_string.split() if x]
-        self.gpu_type, self.gpu_count = self.parse_gres(gres)
-        self.is_down = self.state in down_states
+    name: str
+    gpu_type: str
+    gpu_count: int
+    state: str
+    is_down: bool
 
     def __repr__(self):
         return \
             f'Name: {self.name}'.ljust(20) +\
-            f'GPUs:{self.gpu_count}x{self.gpu_type}'.ljust(15) +\
-            f'State:{self.state}'.ljust(15)
-    
-    def parse_gres(self, gres: str):
-        res_type, gpu_type, number = gres.split(':')
-        if res_type == 'gpu':
-            return gpu_type, int(number)
-        else:
-            raise NotImplementedError('Only GPU node types are supported.')
+            f'GPUs: {self.gpu_count}x{self.gpu_type}'.ljust(20) +\
+            f'State: {self.state}'.ljust(15)
 
 
 class NodeMaster():
     def __init__(self) -> None:
-        self.nodes = self.read_all_nodes()
-        self.nodes = sorted(self.nodes, key=lambda x: x.gpu_type)
-        # self.down_states = ['down', 'drain', 'fail', 'fail*', 'down*']
+        gres_regex = r'gpu:(\w*):(\d)(\(?.*\)?)'
+        sinfo_output = subprocess.check_output([
+            'sinfo', '-N', '-O', 'NodeList,Gres,StateLong']
+            ).decode('utf-8').strip().split('\n')[1:]
+        nodes = []
+        for node_raw in sinfo_output:
+            node_name, gpu_raw, status = [x for x in node_raw.split() if x]
+            matches = re.match(gres_regex, gpu_raw)
+            if not matches:
+                raise NotImplementedError(\
+                    f'Could not parse GPU info for node {node_name}: ' +\
+                        f'{gpu_raw}' 'Please check the sinfo output.')
+            else:
+                gpu_type, gpu_count, _ = matches.groups()
+            nodes.append(Node(node_name, gpu_type, int(gpu_count), 
+                              status, status in down_states))
+
+        self.nodes = sorted(nodes, key=lambda x: (
+            # Cluster nodes first, asteroids last
+            -x.gpu_count,  # Sort by gpu count in descending order
+            x.is_down,  # Available nodes first
+            x.gpu_type,  # Sort by GPU type in ascending order
+            x.name  # Sort by node name in ascending order
+        ))
         self.total_gpu_count = sum([node.gpu_count for node in self.nodes])
         self.total_gpu_count_available = sum(
             [node.gpu_count for node in self.nodes if not node.is_down])
-
-    def read_all_nodes(self):
-        output = subprocess.check_output([
-            'sinfo', '-N', '-O', 'NodeList:15,Gres:15,StateLong:15'])
-        output = output.decode('utf-8')
-        nodes = output.split('\n')[1:]
-        nodes = [Node(node) for node in nodes if node]
-        return nodes
     
     def __repr__(self):
         ret = f'Total GPUs: {self.total_gpu_count}\n'
-        ret += f'Currently available GPUs: {self.total_gpu_count_available}\n'
+        ret += f'Total GPUs currently online: {self.total_gpu_count_available}\n'
         ret += '\nNodes:\n'
         for node in self.nodes:
             ret += str(node) + '\n'
