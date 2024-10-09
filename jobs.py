@@ -146,13 +146,37 @@ class PendingJob(Job):
                 f'Expected job state PENDING, got {raw_dict["JobState"]}')
         super().__init__(raw_dict)
         self.gpus = raw_dict['NumNodes']
-        # self.gres = raw_dict['GRES']
         self.cpus = int(raw_dict['NumCPUs'])
         self.remaining_time = format_time_delta(
             raw_dict['EndTime'], is_future=True)
         self.runtime = raw_dict['RunTime']
         self.start_time = raw_dict['StartTime']
         self.time_limit = raw_dict['TimeLimit']
+        self.parse_gpus_from_tres()
+        
+    def parse_gpus_from_tres(self):
+        tres = self.raw_dict['ReqTRES']
+        requests = tres.split(',')
+        regex1 = r'gres/gpu=(\d+)'
+        regex2 = r'gres/gpu:(.*)=(\d+)'
+        matches1 = [re.match(regex1, x) for x in requests]
+        matches2 = [re.match(regex2, x) for x in requests]
+        gres = [m.group(1) for m in matches1 if m]
+        if len(gres) > 0:
+            gpus = int(gres[0])
+        else:
+            gpus = 0
+        constraints = [m.group(1) for m in matches2 if m]
+        if len(constraints) > 0:
+            gpu_type = constraints[0].upper()
+        else:
+            gpu_type = '<ANY>'
+        self.gpu_type = gpu_type
+        self.gpus = gpus
+        if gpus == 0:
+            self.gres = '0'
+        else:
+            self.gres = f'{gpus}x{gpu_type}'
 
 
 class OtherJob(Job):

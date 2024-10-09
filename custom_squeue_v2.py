@@ -126,10 +126,10 @@ def print_usage_breakdown(jobs: JobMaster):
 
 
 def print_pending_usage_breakdown(jobs: JobMaster):
-    print('GPU requests per user (pending jobs):')
+    print('Breakdown of GPU requests per user (pending jobs):')
     pending_users = set([job.user_id for job in jobs.pending_jobs])
     gpus_per_user_p = {
-        user: [job.gpus for job in jobs.pending_jobs if job.user_id == user]
+        user: [job.gres for job in jobs.pending_jobs if job.user_id == user]
         for user in pending_users}
     jobs_per_user_p = {
         user: len(gpus) for user, gpus in gpus_per_user_p.items()}
@@ -140,7 +140,7 @@ def print_pending_usage_breakdown(jobs: JobMaster):
         if len(gpus) > 0:
             print(f'{user}'.ljust(10) \
                 + f'{jobs_per_user_p[user]} jobs: ' \
-                + f'({gpus} GPUs)')
+                + f' [{", ".join([str(x) for x in gpus])}]')
 
 
 def print_running_jobs_all(jobs: JobMaster, exclude_user):
