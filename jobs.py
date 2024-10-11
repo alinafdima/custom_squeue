@@ -95,6 +95,9 @@ class Job():
         else:
             return 'other'
 
+    def to_dict(self):
+        return {attr: getattr(self, attr) for attr in self.__dict__ if attr != 'raw_dict'}
+
 
 class RunningJob(Job):
     def __init__(self, raw_dict):
