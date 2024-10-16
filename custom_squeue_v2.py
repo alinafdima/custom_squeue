@@ -58,10 +58,14 @@ def print_free_gpus(job_master: JobMaster):
 def print_unavailable_nodes(job_master: JobMaster):
     unavailable_nodes = [
         (node.name, node.state) 
-        for node in job_master.node_master.nodes if node.is_down]
-    unav_string = ', '.join([f'{node} ({state})' 
-                                for node, state in unavailable_nodes])
-    print(f'Unavailable nodes: {unav_string}')
+        for node in job_master.node_master.nodes \
+            if node.is_down and not node.is_asteroid]
+    if len(unavailable_nodes) > 0:
+        unav_string = ', '.join([f'{node} ({state})' 
+                                    for node, state in unavailable_nodes])
+        print(f'Unavailable nodes: {unav_string}')
+    else:
+        print('All the nodes in the universe are up and running.')
 
 
 def print_available_nodes(job_master: JobMaster):
@@ -121,8 +125,10 @@ def print_usage_breakdown(jobs: JobMaster):
         (user, gpus) for user, gpus in gpus_per_user.items()], 
         key=lambda x: (-x[1], x[0]))
     for user, gpus in gpus_per_user:
+        user_jobs = [job for job in jobs.running_jobs if job.user_id == user]
+        user_qos = user_jobs[0].qos
         if gpus > 0:
-            print(f'{user}'.ljust(10) + f'{gpus} GPUs')
+            print(f'{user}'.ljust(10) + f' ({user_qos}) '.ljust(10) + f'{gpus} GPUs')
 
 
 def print_pending_usage_breakdown(jobs: JobMaster):
@@ -138,8 +144,11 @@ def print_pending_usage_breakdown(jobs: JobMaster):
         key=lambda x: x[0])
     for user, gpus in gpus_per_user_p:
         if len(gpus) > 0:
+            user_jobs = [job for job in jobs.pending_jobs if job.user_id == user]
+            user_qos = user_jobs[0].qos
             print(f'{user}'.ljust(10) \
-                + f'{jobs_per_user_p[user]} jobs: ' \
+                + f' ({user_qos}) '.ljust(5) \
+                + f' {jobs_per_user_p[user]} jobs: ' \
                 + f' [{", ".join([str(x) for x in gpus])}]')
 
 
