@@ -46,7 +46,7 @@ display_dict_other = {
 
 
 def print_free_gpus(job_master: JobMaster):
-    node_names = [n.name for n in job_master.node_master.nodes]
+    node_names = [n.name for n in job_master.node_master.nodes if not n.is_unavailable]
 
     available_gpus = job_master.node_master.total_gpu_count_available
     used_gpus_per_node = [job_master.get_gpus_on_node(node) for node in node_names]
@@ -59,7 +59,7 @@ def print_unavailable_nodes(job_master: JobMaster):
     unavailable_nodes = [
         (node.name, node.state) 
         for node in job_master.node_master.nodes \
-            if node.is_down and not node.is_asteroid]
+            if node.is_unavailable and not node.is_asteroid]
     if len(unavailable_nodes) > 0:
         unav_string = ', '.join([f'{node} ({state})' 
                                     for node, state in unavailable_nodes])
@@ -71,7 +71,7 @@ def print_unavailable_nodes(job_master: JobMaster):
 def print_available_nodes(job_master: JobMaster):
     available_nodes = []
     for node in job_master.node_master.nodes:
-        if not node.is_down:
+        if not node.is_unavailable:
             gpus = job_master.get_gpus_on_node(node.name)
             free_gpus = node.gpu_count - gpus
             total_gpus = node.gpu_count
@@ -232,12 +232,12 @@ if  __name__ == '__main__':
 
     jobs = JobMaster()
     if overall:
-        print_overall_gpu_info(jobs)
+        print_overall_gpu_info(jobs, unavailable=False)
         print()
     if user:
         print_my_running_jobs(jobs)
         print_my_pending_jobs(jobs)
-        print_my_other_jobs(jobs)
+        # print_my_other_jobs(jobs)
         print()
     if usage:
         print_usage_breakdown(jobs)

@@ -18,16 +18,18 @@ class Node:
     gpu_type: str
     gpu_count: int
     state: str
-    is_down: bool
+    is_unavailable: bool
     partition: str
     is_asteroid: bool
+    is_private: bool
 
     def __repr__(self):
         return \
             f'Name: {self.name}'.ljust(20) +\
             f'GPUs: {self.gpu_count}x{self.gpu_type}'.ljust(20) +\
             f'State: {self.state}'.ljust(20) +\
-            ('asteroid' if self.is_asteroid else 'universe')
+            ('asteroid' if self.is_asteroid else 'universe').ljust(10) +\
+            ('private' if self.is_private else 'public').ljust(10)
             # f'Partition: {self.partition}'.ljust(15)
 
 
@@ -48,20 +50,24 @@ class NodeMaster():
                         f'{gpu_raw}' 'Please check the sinfo output.')
             else:
                 gpu_type, gpu_count, _ = matches.groups()
+            is_private = partition not in ['asteroids', 'asteroids*', 'universe', 'universe*']
+            is_unavailable = status in down_states or is_private
             nodes.append(Node(node_name, gpu_type, int(gpu_count), 
-                              status, status in down_states, 
-                              partition, partition=='asteroids'))
+                              status, is_unavailable, 
+                              partition, partition=='asteroids',
+                              is_private
+                              ))
 
         self.nodes = sorted(nodes, key=lambda x: (
             # Cluster nodes first, asteroids last
             -x.gpu_count,  # Sort by gpu count in descending order
-            x.is_down,  # Available nodes first
+            x.is_unavailable,  # Available nodes first
             x.gpu_type,  # Sort by GPU type in ascending order
             x.name  # Sort by node name in ascending order
         ))
         self.total_gpu_count = sum([node.gpu_count for node in self.nodes])
         self.total_gpu_count_available = sum(
-            [node.gpu_count for node in self.nodes if not node.is_down])
+            [node.gpu_count for node in self.nodes if not node.is_unavailable])
     
     def __repr__(self):
         ret = f'Total GPUs: {self.total_gpu_count}\n'

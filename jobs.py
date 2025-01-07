@@ -21,6 +21,17 @@ qos_order_dict = {
 }
 
 
+def expand_gres(input):
+    gpus = []
+    for gpu_range in input.split(','):
+        if '-' in gpu_range:
+            start, end = [int(x) for x in gpu_range.split('-')]
+            gpus.extend(range(start, end+1))
+        else:
+            gpus.append(int(gpu_range))
+    return gpus
+
+
 def strfdelta(tdelta, fmt):
     """
     Format a timedelta object as a string.
@@ -108,7 +119,10 @@ class RunningJob(Job):
         super().__init__(raw_dict)
         self.node = raw_dict['Nodes']
         self.gpus = self.count_gpus_in_use()
-        self.gres = self.parse_gres()
+        self.gres, new_gpu_count = self.parse_gres()
+        if new_gpu_count != self.gpus:
+            print(f'WARNING: GPU count mismatch for job {self.job_id}')
+            self.gpus = new_gpu_count
         self.cpus = int(raw_dict['NumCPUs'])
         self.remaining_time = format_time_delta(
             raw_dict['EndTime'], is_future=True)
@@ -132,13 +146,17 @@ class RunningJob(Job):
             matches = re.match('.*(IDX:.*)\\)', job['GRES'])
             if matches is None:
                 gres = f'UNKNOWN ({self.node})'
+                gpus_count = self.gpus
             else:
-                # FIXME: Won't work for more than 1 GPU
-                idx = matches.group(1)[4:]
-                gres = f'{self.node[:4]} {idx}'     
+                indices_raw = matches.group(1)[4:]
+                expanded_gres = expand_gres(indices_raw)
+                gres = f'{self.node[:4]} {str(expanded_gres)}'
+                gpus_count = len(expanded_gres)
+                # gres = f'{self.node[:4]} {idx}'
         else:
             gres = ''
-        return gres
+            gpus_count = 0
+        return gres, gpus_count
 
 
 class PendingJob(Job):
