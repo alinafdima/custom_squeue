@@ -42,7 +42,10 @@ class NodeMaster():
             ).decode('utf-8').strip().split('\n')[1:]
         nodes = []
         for node_raw in sinfo_output:
-            node_name, gpu_raw, status, partition = [x for x in node_raw.split() if x]
+            try:  # TODO: Figure out what is happening with the misconfigured nodes
+                node_name, gpu_raw, status, partition = [x for x in node_raw.split() if x]
+            except ValueError:
+                continue
             matches = re.match(gres_regex, gpu_raw)
             if not matches:
                 raise NotImplementedError(\
