@@ -14,15 +14,16 @@ from job_master import JobMaster
 
 display_dict_running = {
     'job_id': 6, 
-    'user_id': 8, 
-    'qos': 5,
+    'node': 12,
+    # 'user_id': 8, 
+    # 'qos': 5,
     'gpus': 4,
     'cpus': 4,
     'mem': 6,
-    'node': 15,
-    'priority': 10,
+    'priority': 7,
     'runtime': 10,
-    'remaining_time': 15,
+    'remaining_time': 14,
+    'name': 27,
 }
 
 display_dict_pending = {
