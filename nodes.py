@@ -38,6 +38,7 @@ class NodeMaster():
         gres_regex = r'gpu:(\w*):(\d)(\(?.*\)?)'
         sinfo_output = subprocess.check_output([
             'sinfo', '-N', '-O', 'NodeList,Gres,StateLong,Partition']
+            # sinfo -N -O NodeList,Gres,StateLong,Partition
             # 'sinfo', '-N', '-O', 'NodeList,Gres,StateLong']
             ).decode('utf-8').strip().split('\n')[1:]
         nodes = []

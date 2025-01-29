@@ -148,11 +148,16 @@ class RunningJob(Job):
                 gres = f'UNKNOWN ({self.node})'
                 gpus_count = self.gpus
             else:
-                indices_raw = matches.group(1)[4:]
-                expanded_gres = expand_gres(indices_raw)
-                gres = f'{self.node[:4]} {str(expanded_gres)}'
-                gpus_count = len(expanded_gres)
-                # gres = f'{self.node[:4]} {idx}'
+                try:
+                    # Sometimes the matching goes wrong. This is a workaround.
+                    indices_raw = matches.group(1)[4:]
+                    expanded_gres = expand_gres(indices_raw)
+                    gres = f'{self.node[:4]} {str(expanded_gres)}'
+                    gpus_count = len(expanded_gres)
+                    # gres = f'{self.node[:4]} {idx}'
+                except ValueError:
+                    gres = f'UNKNOWN ({self.node})'
+                    gpus_count = self.gpus
         else:
             gres = ''
             gpus_count = 0
