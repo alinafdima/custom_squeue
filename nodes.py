@@ -83,4 +83,7 @@ class NodeMaster():
 
 if __name__ == '__main__':
     nodes = NodeMaster()
+    public_node_names = [node.name for node in NodeMaster().nodes if not node.is_private]
+    
     print(nodes)
+    print(f'Public nodes: {public_node_names}')

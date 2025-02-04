@@ -10,7 +10,9 @@
 
 import re
 from datetime import datetime
+from nodes import NodeMaster
 
+public_node_names = [node.name for node in NodeMaster().nodes if not node.is_private]
 
 qos_order_dict = {
     'phd|d': 1,
@@ -130,6 +132,7 @@ class RunningJob(Job):
         self.start_time = raw_dict['StartTime']
         self.time_limit = raw_dict['TimeLimit']
         self.mem = f"{int(raw_dict['Mem']) // 1000} GB"
+        self.is_private_gpu = self.node not in public_node_names
 
     def count_gpus_in_use(self):
         job = self.raw_dict
