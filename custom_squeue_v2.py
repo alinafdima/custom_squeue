@@ -161,9 +161,11 @@ def print_usage_breakdown(jobs: JobMaster):
     for user, gpus in gpus_per_user:
         user_jobs = [job for job in jobs.running_jobs if job.user_id == user]
         user_qos = user_jobs[0].qos
+        user_name = user_jobs[0].user_name
         if gpus > 0:
             print(
                 f"{user}".ljust(10)
+                + f" {user_name} ".ljust(30)
                 + f" ({user_qos}) ".ljust(10)
                 + f"{gpus} GPUs"
             )
@@ -197,8 +199,10 @@ def print_pending_usage_breakdown(jobs: JobMaster):
                 job for job in jobs.pending_jobs if job.user_id == user
             ]
             user_qos = user_jobs[0].qos
+            user_name = user_jobs[0].user_name
             print(
                 f"{user}".ljust(10)
+                + f" {user_name} ".ljust(30)
                 + f" ({user_qos}) ".ljust(5)
                 + f" {jobs_per_user_p[user]} jobs: "
                 + f' [{", ".join([str(x) for x in gpus])}]'
