@@ -48,13 +48,32 @@ display_dict_other = {
 
 
 def print_free_gpus(job_master: JobMaster):
-    node_names = [n.name for n in job_master.node_master.nodes if not n.is_unavailable]
+    # For a list of nodes compute: used GPUs, total GPUs, free GPUs
+    data = {}
+    for node in job_master.node_master.nodes:
+        if node.is_unavailable:
+            continue
+        free_gpus = job_master.get_gpus_on_node(node.name)
+        used_gpus = node.gpu_count - free_gpus
+        data[node.name] = (free_gpus, node.gpu_count, used_gpus)
 
-    available_gpus = job_master.node_master.total_gpu_count_available
-    used_gpus_per_node = [job_master.get_gpus_on_node(node) for node in node_names]
-    used_gpus = sum(used_gpus_per_node)
+    names_non_aster = [
+        n.name
+        for n in job_master.node_master.nodes
+        if not n.is_asteroid and not n.is_unavailable
+    ]
 
-    print(f"Free GPUs: {available_gpus - used_gpus} / {available_gpus}")
+    total_gpus = sum([x[1] for x in data.values()])
+    used_gpus = sum([x[0] for x in data.values()])
+    free_gpus = sum([x[2] for x in data.values()])
+    free_non_aster = sum(
+        [x[2] for k, x in data.items() if k in names_non_aster]
+    )
+
+    print(
+        f"Free GPUs: {free_gpus} / {total_gpus}",
+        f"({free_non_aster} are non-asteroid GPUs)",
+    )
 
 
 def print_unavailable_nodes(job_master: JobMaster):
@@ -98,7 +117,8 @@ def print_my_running_jobs(jobs: JobMaster):
     running_jobs = jobs.user_running_jobs
     if len(running_jobs) > 0:
         print(
-            f"My running jobs: ({len(running_jobs)}). [Only the first 10 are displayed]"
+            f"My running jobs: ({len(running_jobs)}).",
+            "[Only the first 10 are displayed]",
         )
         jobs.display_jobs(running_jobs, display_dict_running)
     else:
@@ -110,7 +130,8 @@ def print_my_pending_jobs(jobs: JobMaster):
     if len(pending_jobs) > 0:
         print()
         print(
-            f"My pending jobs: ({len(pending_jobs)}). [Only the first 10 are displayed]"
+            f"My pending jobs: ({len(pending_jobs)}).",
+            "[Only the first 10 are displayed]",
         )
         jobs.display_jobs(pending_jobs[:10], display_dict_pending)
 
@@ -128,7 +149,9 @@ def print_usage_breakdown(jobs: JobMaster):
     print("GPU usage per user (running jobs):")
     running_users = set([job.user_id for job in jobs.running_jobs])
     gpus_per_user = {
-        user: sum([job.gpus for job in jobs.running_jobs if job.user_id == user])
+        user: sum(
+            [job.gpus for job in jobs.running_jobs if job.user_id == user]
+        )
         for user in running_users
     }
     gpus_per_user = sorted(
@@ -139,7 +162,11 @@ def print_usage_breakdown(jobs: JobMaster):
         user_jobs = [job for job in jobs.running_jobs if job.user_id == user]
         user_qos = user_jobs[0].qos
         if gpus > 0:
-            print(f"{user}".ljust(10) + f" ({user_qos}) ".ljust(10) + f"{gpus} GPUs")
+            print(
+                f"{user}".ljust(10)
+                + f" ({user_qos}) ".ljust(10)
+                + f"{gpus} GPUs"
+            )
     master_student_jobs = [job for job in jobs.running_jobs if "msc" in job.qos]
     phd_student_jobs = [job for job in jobs.running_jobs if "phd" in job.qos]
 
@@ -157,13 +184,18 @@ def print_pending_usage_breakdown(jobs: JobMaster):
         user: [job.gres for job in jobs.pending_jobs if job.user_id == user]
         for user in pending_users
     }
-    jobs_per_user_p = {user: len(gpus) for user, gpus in gpus_per_user_p.items()}
+    jobs_per_user_p = {
+        user: len(gpus) for user, gpus in gpus_per_user_p.items()
+    }
     gpus_per_user_p = sorted(
-        [(user, gpus) for user, gpus in gpus_per_user_p.items()], key=lambda x: x[0]
+        [(user, gpus) for user, gpus in gpus_per_user_p.items()],
+        key=lambda x: x[0],
     )
     for user, gpus in gpus_per_user_p:
         if len(gpus) > 0:
-            user_jobs = [job for job in jobs.pending_jobs if job.user_id == user]
+            user_jobs = [
+                job for job in jobs.pending_jobs if job.user_id == user
+            ]
             user_qos = user_jobs[0].qos
             print(
                 f"{user}".ljust(10)
@@ -204,18 +236,28 @@ parser.add_argument(
 parser.add_argument("--all", action="store_true", help="Show all info.")
 parser.add_argument("--jobs", action="store_true", help="Show only job info.")
 
-parser.add_argument("--overall", action="store_true", help="Show overall GPU info.")
+parser.add_argument(
+    "--overall", action="store_true", help="Show overall GPU info."
+)
 parser.add_argument("--user", action="store_true", help="Show only user jobs.")
 parser.add_argument(
     "--all_users", action="store_true", help="Show jobs from all users."
 )
-parser.add_argument("--usage", action="store_true", help="Show GPU usage breakdown.")
 parser.add_argument(
-    "--all_users_pending", action="store_true", help="Show pending jobs from all users."
+    "--usage", action="store_true", help="Show GPU usage breakdown."
+)
+parser.add_argument(
+    "--all_users_pending",
+    action="store_true",
+    help="Show pending jobs from all users.",
 )
 # Default values
 parser.set_defaults(
-    overall=False, user=False, usage=False, all_users=False, all_users_pending=False
+    overall=False,
+    user=False,
+    usage=False,
+    all_users=False,
+    all_users_pending=False,
 )
 
 
