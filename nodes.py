@@ -42,6 +42,8 @@ def parse_complex_gpu_descriptions(gpu_raw, node_name):
     GPU specs (gpu:) followed by a list of corresponding memory specs (gpumem:).
     Example string from a node with 2 gpu types (name1 and name2) with 2 GPUs each:
     'gpu:name1:2(S:0-15),gpu:name2:2(S:0-15),gpumem:name1:48G,gpumem:name2:48G'
+    Name convention changed to: 
+    'gpu:name1:2(S:0-15),gpu:name2:2(S:0-15),gpumem:name1:no_consume:48G,gpumem:name2:no_consume:48G'
 
     Args:
         gpu_raw (str): The raw string containing the GPU info
@@ -91,7 +93,7 @@ def parse_complex_gpu_descriptions(gpu_raw, node_name):
         gpu_type1 = gres_match.groups()[0]
 
         # 2b. Parse the memory using regular split
-        gpu_type2, gmem = gpu_mem_raw.split(":")
+        gpu_type2, _, gmem = gpu_mem_raw.split(":")
 
         # 2c. Check if the gpu type is the same
         if not gpu_type2 == gpu_type1:
@@ -126,9 +128,16 @@ class NodeMaster:
                 print(f"Could not parse node info: {node_raw}")
                 continue
 
-            gpu_count, gpu_type = parse_complex_gpu_descriptions(
-                gpu_raw, node_name
-            )
+            try:
+                gpu_count, gpu_type = parse_complex_gpu_descriptions(
+                    gpu_raw, node_name
+                )
+            except ValueError:
+                # print(f"Could not parse gpu info: {gpu_raw}")
+                print(f"Could not parse gpu info for {node_name}: {gpu_raw}")
+                # continue
+                gpu_count, gpu_type = 0, "unknown"
+
             is_private = partition not in [
                 "asteroids",
                 "asteroids*",
